@@ -1,0 +1,312 @@
+module pratica4_2(SW, LEDR, HEX0, HEX1, HEX2);
+  input [17:0]SW;
+  output [17:0]LEDR;
+  output [6:0]HEX0, HEX1, HEX2;
+  wire [2:0]saida0, saida1, saida2;
+
+  snoop Bisbilhotando(SW[16], SW[17], SW[2:0], saida0, saida1, saida2);
+  snp Escutando(SW[16], SW[17], SW[2:0], saida0, saida1, saida2);
+
+  display7Segmentos Exibe0(saida0, HEX0);
+  display7Segmentos Exibe1(saida1, HEX1);
+  display7Segmentos Exibe2(saida2, HEX2);
+
+endmodule
+
+//saida0 = state  HEX0
+//saida1 = bus    HEX1
+//saida2 = signal HEX2
+
+module display7Segmentos(Entrada, SaidaDisplay); //visual output
+	input [2:0]Entrada;
+	output reg [0:6]SaidaDisplay;
+
+	always begin
+		case(Entrada)
+			0:SaidaDisplay = 7'b1000000; //0
+			1:SaidaDisplay = 7'b1111001; //1
+			2:SaidaDisplay = 7'b0100100; //2
+			3:SaidaDisplay = 7'b0110000; //3
+			4:SaidaDisplay = 7'b0011001; //4
+			5:SaidaDisplay = 7'b0010010; //5
+			6:SaidaDisplay = 7'b0000010; //6
+			7:SaidaDisplay = 7'b1111000; //7
+			default:SaidaDisplay = 7'b0000000;//F
+		endcase
+	end
+endmodule
+
+module projeto(clock, reset, entrada, saida0, saida1,saida2);
+
+  input clock, reset;
+  input [11:0]entrada;
+  output saida0, saida1, saida2;
+
+  parameter memTAM = 6,
+  parameter cacheTAM = 2;
+  integer i;
+
+  wire [2:0]signal;
+  wire [2:0]stateDest;
+  reg [1:0]processador;
+  reg [cacheTAM:0]cacheP1[7:0];
+  reg [cacheTAM:0]cacheP2[7:0];
+  reg [cacheTAM:0]cacheP3[7:0];
+  reg [memTAM:0]memoria[3:0];
+  reg [3:0]data;
+  reg achei;
+  reg inst;
+
+  //chacheP1 [7] = state
+  //cacheP2 [6:4] = tag
+  //cacheP3 [3:0] = value
+
+  //entrada [11:10] = processador
+  //entrada [9:7] = inst
+  //entrada [6:4] = tag
+  //entrada [3:0] = value
+
+  assign inst = (entrada[4]);
+  assign processador = (entrada[6:5]);
+
+  always @ (posedge clock) begin
+    signal = 0;
+    achei = 0
+    if(inst == 1) data = (entrada[3:0]);
+    //-----------1 PASSO-PROCURAR PELO BLOCO-----------//
+    case (inst)
+      0:begin //read
+          case (processador)//qual processador solicitou
+            0:begin
+                for(i = 0; i < cacheTAM ; i++)begin
+                  if(cacheP1[i][6:4] == entrada[6:4])begin //READ HIT
+                  achei = 1;
+                  snoop instSnoop1(clock, 3'b011, cacheP1[i][7], stateDest, signal);
+                  cache[i][7] = stateDest;
+                  end
+                end
+              end
+            1:begin
+                for(i = 0; i < cacheTAM ; i++)begin
+                  if(cacheP2[i][6:4] == entrada[6:4])begin //READ HIT
+                  achei = 1;
+                  snoop instSnoop2(clock, 3'b011, cacheP2[i][7], stateDest, signal);
+                  cacheP3[i][7] = stateDest;
+                  end
+                end
+              end
+            2:begin
+                for(i = 0; i < cacheTAM ; i++)begin
+                  if(cacheP3[i][6:4] == entrada[6:4])begin //READ HIT
+                  achei = 1;
+                  snoop instSnoop3(clock, 3'b011, cacheP3[i][7], stateDest, signal);
+                  cacheP3[i][7] = stateDest;
+                  end
+                end
+              end
+          endcase //termina a busca por preferencia
+
+          if(achei == 0 && processador != 0)begin //procura no 1
+          for(i = 0; i < cacheTAM ; i++)begin
+            if((cacheP1[i][6:4] == entrada[6:4]) && (cacheP1[i][7] == 3'b010))begin //read miss|satisfeito pela cache
+            achei = 1;
+            snoop instSnoop3(clock, 3'b001, cacheP1[i][7], stateDest, signal);
+            cacheP1[i][7] = stateDest;
+            end
+          end
+          if(achei == 0 && processador != 1)begin //ṕrocura no 2
+          for(i = 0; i < cacheTAM ; i++)begin
+            if((cacheP2[i][6:4] == entrada[6:4]) && (cacheP2[i][7] == 3'b010))begin //read miss|satisfeito pela cache
+            achei = 1;
+            snoop instSnoop3(clock, 3'b001, cacheP2[i][7], stateDest, signal);
+            cacheP2[i][7] = stateDest;
+            end
+          end
+          if(achei == 0 && processador != 2)begin //procura no 3
+          for(i = 0; i < cacheTAM ; i++)begin
+            if((cacheP1[i][6:4] == entrada[6:4]) && (cacheP1[i][7] == 3'b010))begin //read miss|satisfeito pela cache
+            achei = 1;
+            snoop instSnoop3(clock, 3'b001, cacheP3[i][7], stateDest, signal);
+            cacheP3[i][7] = stateDest;
+            end
+          end
+
+          if(achei == 0)begin //nao encontrou em lugar algum, satisfaz pela MEM
+            case(processador)
+              1:begin
+                cacheP1[0][7] = 3'b000;
+                cacheP1[0][6:4] = entrada[6:4];
+                cacheP1[0][3:0] = memoria[entrada[6:4]];
+                end
+              2:begin
+                cacheP1[0][7] = 3'b000;
+                cacheP2[0][6:4] = entrada[6:4];
+                cacheP3[0][3:0] = memoria[entrada[6:4]];
+                end
+              3:begin
+                cacheP1[0][7] = 3'b000;
+                cacheP2[0][6:4] = entrada[6:4];
+                cacheP3[0][3:0] = memoria[entrada[6:4]];
+                end
+            endcase
+          end
+        end //fim read
+
+      1:begin //write
+          case (processador)//qual processador solicitou
+            0:begin
+                for(i = 0; i < cacheTAM ; i++)begin
+                  if(cacheP1[i][6:4] == entrada[6:4])begin //write hit
+                  achei = 1;
+                  snoop instSnoop1(clock, 3'b100, cacheP1[i][7], stateDest, signal);
+                  cacheP1[i][7] = stateDest;
+                  end
+                end
+              end
+            1:begin
+                for(i = 0; i < cacheTAM ; i++)begin
+                  if(cacheP2[i][6:4] == entrada[6:4])begin
+                  achei = 1;
+                  snoop instSnoop2(clock, 3'b100, cacheP2[i][7], stateDest, signal);
+                  cacheP2[i][7] = stateDest;
+                  end
+                end
+              end
+            2:begin
+                for(i = 0; i < cacheTAM ; i++)begin
+                  if(cacheP3[i][6:4] == entrada[6:4])begin
+                  achei = 1;
+                  snoop instSnoop3(clock, 3'b100, cacheP3[i][7], stateDest, signal);
+                  cacheP3[i][7] = stateDest;
+                  end
+                end
+              end
+          endcase //termina a busca por preferencia
+
+          if(achei == 0)begin //write miss
+          snoop instSnoop(clock, 3'b010, cacheP3[i][7], stateDest, signal);
+          cacheP3[i][7] = stateDest;
+          end
+        end //fim write
+
+    endcase
+
+    //-----------2 PASSO-Tomar atitudes em relação a outros processadores-----------//
+    if(processador != 0)begin //procura no 1
+    for(i = 0; i < cacheTAM ; i++)begin
+      if(cacheP1[i][6:4] == entrada[6:4])begin
+      end
+    end
+    if(processador != 1)begin //ṕrocura no 2
+    for(i = 0; i < cacheTAM ; i++)begin
+      if(cacheP2[i][6:4] == entrada[6:4])begin
+      end
+    end
+    if(processador != 2)begin //procura no 3
+    for(i = 0; i < cacheTAM ; i++)begin
+      if(cacheP3[i][6:4] == entrada[6:4])begin
+      end
+    end
+    if(achei == 0)begin
+    end
+  end
+
+  initial begin
+    //-----------Inicia a memoria e as cache-----------//
+    for(i = 0; i < memTAM ; i++)begin
+      memoria[i][cache] = i;
+      memoria[i] = i;
+    end //for
+    for(i = 0; i < cacheTAM ; i++)begin
+      //data
+      cacheP1[i][3:0] = i;
+      cacheP2[i][3:0] = i;
+      cacheP3[i][3:0] = i
+      //tag
+      cacheP3[i][6:4] = i
+      cacheP3[i][6:4] = i
+      cacheP3[i][6:4] = i
+      //state
+      cacheP3[i][7] = i
+      cacheP3[i][7] = i
+      cacheP3[i][7] = i
+    end //for
+  end
+
+endmodule
+
+
+module snoop(clock, bus, state, saida0, saida1);
+  input clock;
+  input [2:0]bus;
+  input [2:0]state; //|0 = shared |1=Invalid |2=Exclusive
+  output [2:0]saida0; //state final
+  output [2:0]signal; //sinal resposta
+
+  /*----------------------------
+  BUS:
+  1:read miss	3:read hit
+  2:write mis	4:write hit
+
+  Sinal:
+  1:Place read miss on bus
+  2:Place write miss on bus
+
+  3:Place read miss on bus: WB-block
+  4:Place write miss on bus: WB-cashe block
+  5:Place Invalidate on bus
+  ----------------------------*/
+  assign saida1 = bus;
+
+  always @ (posedge clock) begin
+	 signal = 3'b000;
+    case(state)
+      0:begin //shared
+        case(bus)
+          1:begin //read miss
+					saida0 = 3'b001; //place read miss on bus
+				end
+          2:begin //write miss
+              signal = 3'b010; //place writemiss on bus
+				      saida0 = 3'b010;  //shared -> exclusive
+            end
+          4:begin //write hit
+              signal = 3'b101; //place invalidate on bus
+              saida0 = 3'b010;  //shared -> exclusive
+            end
+        endcase
+      end
+      1:begin //invalid
+        case(bus)
+          1:begin //read miss
+              signal = 3'b001; //place read miss on bus
+              saida0 = 3'b000;  //invalid -> shared
+            end
+          3:begin //read hit
+              signal = 3'b001; //place read miss on bus
+              saida0 = 3'b000;  //invalid -> shared
+            end
+          2:begin //write miss
+              signal = 3'b010; //place write miss on bus
+              saida0 = 3'b010;  //invalid ->exclusive
+            end
+          4:begin //write hit
+              signal = 3'b010; //place write miss on bus
+              saida0 = 3'b010;  //invalid -> exclusive
+            end
+        endcase
+      end
+      2:begin //Exclusive
+        case (bus)
+          1:begin //read miss
+              signal = 3'b011; //place read miss on bus WB-block
+              saida0 = 3'b000;  //exclusive -> invalid
+            end
+          2:begin //write miss
+					saida0 = 3'b100; //write miss on bus WB-cash block
+				end
+        endcase
+      end
+    endcase
+  end
+endmodule

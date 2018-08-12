@@ -1,0 +1,66 @@
+m255
+K3
+13
+cModel Technology
+Z0 dC:\Users\Positivo\Desktop\faculdade\LAOC2\pratica4_2\simulation\modelsim
+vdisplay7Segmentos
+!i10b 1
+!s100 cjSidDJ<XBbS6c4BBk7<@3
+I;EWZ^eFODYaL2Ki]e7jY_2
+V[A5gVV?ak5D`A8F02N14`3
+Z1 dC:\Users\Positivo\Desktop\faculdade\LAOC2\pratica4_2\simulation\modelsim
+Z2 w1530332453
+Z3 8C:/Users/Positivo/Desktop/faculdade/LAOC2/pratica4_2/pratica4_2.v
+Z4 FC:/Users/Positivo/Desktop/faculdade/LAOC2/pratica4_2/pratica4_2.v
+L0 18
+Z5 OV;L;10.1d;51
+r1
+!s85 0
+31
+Z6 !s108 1530332722.989000
+Z7 !s107 C:/Users/Positivo/Desktop/faculdade/LAOC2/pratica4_2/pratica4_2.v|
+Z8 !s90 -reportprogress|300|-vlog01compat|-work|work|+incdir+C:/Users/Positivo/Desktop/faculdade/LAOC2/pratica4_2|C:/Users/Positivo/Desktop/faculdade/LAOC2/pratica4_2/pratica4_2.v|
+!s101 -O0
+Z9 o-vlog01compat -work work -O0
+Z10 !s92 -vlog01compat -work work +incdir+C:/Users/Positivo/Desktop/faculdade/LAOC2/pratica4_2 -O0
+ndisplay7@segmentos
+vpratica4_2
+!i10b 1
+!s100 R]E2]l<G9:Tcj]d?hOdjO1
+IDU_<Fo[dWSX0IF0Qe2F8>3
+V4=m2;A1d1>FcVUDTf:n[E1
+R1
+R2
+R3
+R4
+L0 1
+R5
+r1
+!s85 0
+31
+R6
+R7
+R8
+!s101 -O0
+R9
+R10
+vprojeto
+!i10b 1
+!s100 YKQOn_1GK@AjcJ2I<dVad3
+If8>IKk`ZIB`O;_jf6b_BK1
+VSIHFGN_1SmHYJ871Fd6gj1
+R1
+R2
+R3
+R4
+L0 37
+R5
+r1
+!s85 0
+31
+R6
+R7
+R8
+!s101 -O0
+R9
+R10
